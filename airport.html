@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"    >
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet" />
+        <link href="bootstrap.css" rel="stylesheet" />
+        <script type="text/javascript" src="jquery-1.8.2.min.js"></script>
+        <script type="text/javascript" src="bootstrap.css"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+
+    </head>
+
+    <div class="header-choose">
+        <h1>Выбрать аэропорт:</h1>
+    </div>
+    <br>
+    <select  autocomplete="off" class="select-airport" style="width: 100%; font-size: 32px" name="airport">
+        <option selected value="SVO">Шереметьево</option>
+        <option value="DME">Домодедово</option>
+        <option value="VKO">Внуково</option>
+    </select>
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="header-h1">
+                    <a class="departure"><h1 class="departure" style="font-weight: bold">Вылет</h1></a>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="header-h1">
+                    <a class="arrival"><h1 class="arrival">Прилет</h1></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <br>
+
+    <select  autocomplete="off" style="width: 100%;" class="select-status"  name="status">
+        <option selected value="all">All</option>
+        <option value="landed">Landed</option>
+        <option value="active">Active</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="scheduled">Scheduled</option>
+    </select>
+
+    <br>
+        <div>
+            <table class="table table-bordered">
+                <tbody class="airport-list" id="info">
+
+                </tbody>
+            </table>
+
+        </div>
+
+
+
+
+
+    <script type="application/javascript">
+        $(document).ready(function() {
+
+            var airport = 'SVO';
+            var type = 'departure';
+            var status = 'all';
+
+            change_state();
+
+            function format(state) {
+                return "<div style='font-size: 32px'>" + state.text + "</div>";
+            }
+
+            $('.select-airport').select2({
+                formatResult: format
+            });
+
+            $('.select-status').select2({
+                formatResult: function format(state) {
+                    return "<p style='font-size: 12px'>" + state.text + "</p>";
+                }
+            });
+
+            $('.select-airport').change(function () {
+                airport = $(this).val();
+                change_state();
+            });
+
+            $('.select-status').change(function () {
+                status = $(this).val();
+                change_state();
+            });
+
+            $('.departure').click(function () {
+                type = 'departure';
+                $('.departure').css('font-weight', 'bold');
+
+                $('.arrival').css('font-weight', 'normal');
+
+                change_state();
+
+            });
+
+            $('.arrival').click(function () {
+                type = 'arrival';
+                $('.arrival').css('font-weight', 'bold');
+                $('.departure').css('font-weight', 'normal');
+
+                change_state();
+
+            });
+
+
+            function change_state() {
+                $('#info').empty();
+
+                if (type == 'departure') {
+                    var t1 = 'отправления';
+                    var t2 = 'назначения';
+                }
+                if (type == 'arrival') {
+                    var t1 = 'прибытия';
+                    var t2 = 'отправления';
+                }
+                var text = '<tr><th>Номер рейса </th> <th>Время '+t1+' </th> <th>Код аэропорта '+t2+' </th>' +
+                        '<th> Статус <br></th> </tr>';
+
+                $("#info").append(text);
+                $.get('http://aviation-edge.com/v2/public/timetable?key=cf91ad-2372da&iataCode=' + airport + '&type=' + type, function (data) {
+                    var prev_time, time;
+                    var prev_code, code;
+                    var air = JSON.parse(data);
+                    $.each(air, function (i, item) {
+                        if (status == 'all' || item.status == status) {
+                            if (type == 'departure') {
+                                code = item.arrival.iataCode;
+                                time = item.departure.scheduledTime;
+                            }
+                            if (type == 'arrival') {
+                                code = item.departure.iataCode;
+                                time = item.arrival.scheduledTime;
+                            }
+                            time = new Date(time).toLocaleString();
+                            if (time == prev_time && code == prev_code) {
+                                $('td.num:last').append(', ' + item.airline.iataCode + ' ' + item.flight.number)
+                            }
+                            else {
+
+                                $('#info').append('<tr><td class="num">' + item.airline.iataCode + ' ' + item.flight.number + '</td>/' +
+                                        '<td>' + time + '</td>/' +
+                                        '<td>' + code + '</td>/' +
+                                        '<td>' + item.status + '</td></tr>')
+                            }
+                            prev_time = time;
+                            prev_code = code;
+                        }
+                    });
+
+                });
+
+            }
+        });
+        </script>
+
